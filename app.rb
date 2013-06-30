@@ -219,8 +219,25 @@ get '/site_files/text_editor/:filename' do |filename|
   slim :'site_files/text_editor'
 end
 
+get '/site_files/live_editor/:filename' do |filename|
+  require_login
+  file = File.read File.join(site_base_path(current_site.username), filename)
+  stream do |out|
+    out << file
+    out << "<script src='/js/live_edit.js'></script>"
+  end
+end
+
+
+get '/site_files/visual_editor/:filename' do |filename|
+  require_login
+  @file_data = File.read File.join(site_base_path(current_site.username), filename)
+  slim :'site_files/visual_editor'
+end
+
+
 post '/site_files/save/:filename' do |filename|
-  require_login_ajax
+  require_login
 
   tmpfile = Tempfile.new 'neocities_saving_file'
 
@@ -228,7 +245,7 @@ post '/site_files/save/:filename' do |filename|
     halt 'File is too large to fit in your space, it has NOT been saved. Please make a local copy and then try to reduce the size.'
   end
 
-  input = request.body.read
+  input = params[:html] || request.body.read
   tmpfile.set_encoding input.encoding
   tmpfile.write input
   tmpfile.close
@@ -243,6 +260,7 @@ post '/site_files/save/:filename' do |filename|
 
   current_site.update updated_at: Time.now
 
+  redirect "/dashboard" unless request.xhr?
   'ok'
 end
 
